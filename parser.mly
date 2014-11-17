@@ -1,10 +1,6 @@
 %{
 
-open Codegen
-
-let depth = ref 0
-let depth_incr f = incr depth; f !depth
-let depth_reset = depth := 0
+open Ast
 
 %}
 
@@ -18,31 +14,23 @@ let depth_reset = depth := 0
 %token COMMA SEMICOLON 
 
 %start program
-%type <unit> program
+%type <Ast.ast> program
 
 %%
 
 program:
-|   begin_stmt statements end_stmt EOF { raise End_of_file }
-;
-
-begin_stmt:
-|   BEGIN { generate_begin () }
-;
-
-end_stmt:
-|   END { generate_end () }
+| BEGIN statements END EOF { PROGRAM $2 }
 ;
 
 statements:
-| { }
-| statement SEMICOLON statements { }
+| { [] }
+| statement SEMICOLON statements { $1 :: $3 }
 ;
 
 statement:
-| IDENTIFIER ASSIGN expression { generate_assign $1 $3; depth_reset }
-| READ LEFTPAREN identifier_list RIGHTPAREN { generate_reads $3 }
-| WRITE LEFTPAREN expression_list RIGHTPAREN { generate_writes $3; depth_reset }
+| IDENTIFIER ASSIGN expression { ASSIGNMENT ($1, $3) }
+| READ LEFTPAREN identifier_list RIGHTPAREN { READCALL $3 }
+| WRITE LEFTPAREN expression_list RIGHTPAREN { WRITECALL $3 }
 ;
 
 expression_list:
@@ -56,20 +44,20 @@ identifier_list:
 ;
 
 expression:
-| IDENTIFIER { var $1 }
-| LITERAL { generate_literal $1 } 
+| IDENTIFIER { VAR $1 }
+| LITERAL { NUMBER $1 } 
 | addop { $1 }
 | subop { $1 }
 ;
 
 addop:
-| LITERAL ADDOP LITERAL { generate_literal ($1 + $3) }
-| expression ADDOP expression { (depth_incr generate_add) $1 $3 }
+| LITERAL ADDOP LITERAL { NUMBER ($1 + $3) }
+| expression ADDOP expression { ADD ($1, $3) }
 ;
 
 subop:
-| LITERAL SUBOP LITERAL { generate_literal ($1 - $3) }
-| expression SUBOP expression { (depth_incr generate_sub) $1 $3 }
+| LITERAL SUBOP LITERAL { NUMBER ($1 - $3) }
+| expression SUBOP expression { SUB ($1, $3) }
 ;
 
 %%

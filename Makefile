@@ -12,12 +12,15 @@ parser.ml: parser.mly
 lexer.ml: lexer.mll
 	$(OCAMLLEX) $<
 
-micro: micro.ml codegen.ml lexer.ml parser.ml
+micro: ast.mli micro.ml codegen.ml lexer.ml parser.ml
+	$(OCAMLC) $(OCAMLC_FLAGS) ast.mli
 	$(OCAMLC) $(OCAMLC_FLAGS) parser.mli
 	$(OCAMLC) $(OCAMLC_FLAGS) -o $@ str.cma codegen.ml parser.ml lexer.ml  micro.ml
 
 ############
 clean:
+	rm -f ast.cmo
+	rm -f ast.cmi
 	rm -f codegen.cmo
 	rm -f codegen.cmi
 	rm -f lexer.ml

@@ -4,19 +4,20 @@ let compile f =
         let out_chan = open_out (out ^ ".s")
         and lexbuf = Lexing.from_channel (open_in f) in
         try
-            let rec parse () = 
-                Parser.program Lexer.micro lexbuf; parse () in
+            let parse () = Parser.program Lexer.micro lexbuf in
             Codegen.set_chan out_chan;
-            ignore(parse ());
+            Codegen.codegen (parse ());
+            close_out out_chan;
+            ignore(Sys.command ("nasm -f elf32 " ^ out ^ ".s"));
+            ignore(Sys.command ("gcc -m32 -o " ^ out ^ " " ^ out ^ ".o"))
         with 
-          End_of_file -> 
-            begin
-                close_out out_chan;
-                ignore(Sys.command ("nasm -f elf32 " ^ out ^ ".s"));
-                ignore(Sys.command ("gcc -m32 -o " ^ out ^ " " ^ out ^ ".o"))
-            end
+        | Codegen.Codegen_error s ->
+            print_string s;
+            print_string "\n";
+            exit 1
         | Lexer.Syntax_error s ->
             print_string s;
+            print_string "\n";
             exit 1
 
 let help () = print_string "micro <file>\n"

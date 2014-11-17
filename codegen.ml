@@ -1,3 +1,5 @@
+open Ast
+
 exception Codegen_error of string
 
 let codegen_error msg = raise (Codegen_error msg)
@@ -69,7 +71,6 @@ let generate_write i = push i;
                        op "call" "printf";
                        op2 "add " "esp" "8"
 
-let generate_writes = List.iter generate_write
 
 let generate_literal = string_of_int
 
@@ -89,3 +90,28 @@ let generate_sub d id1 id2 = let v = var (temp_var d) in
                              if is_var id2 then begin op2 "mov " "eax" id2; op2 "sub " v "eax" end
                              else op2 "sub " v id2; v
     
+(* code generation based on ast nodes *)
+let rec generate_expression d e = 
+        match e with
+            | NUMBER n -> generate_literal n
+            | VAR v -> var v
+            | ADD (e1, e2) -> generate_add d (generate_expression (d+1) e1) (generate_expression (d+1) e2)
+            | SUB (e1, e2) -> generate_sub d (generate_expression (d+1) e1) (generate_expression (d+1) e2)
+            | _ -> codegen_error "expected expression ast node" 
+
+let generate_writes = let gen_write e = generate_write (generate_expression 1 e) in List.iter gen_write
+
+let generate_statement s =
+        match s with
+        | ASSIGNMENT (name, expression) -> generate_assign name (generate_expression 1 expression)
+        | WRITECALL expressions -> generate_writes expressions
+        | READCALL identifiers -> generate_reads identifiers
+        | _ -> codegen_error "expected one of statement type ast nodes"
+
+let generate_statements = List.iter generate_statement
+
+let codegen p = 
+        match p with
+            | PROGRAM statements -> generate_begin (); generate_statements statements; generate_end ()
+            | _ -> codegen_error "expected program ast node" 
+
