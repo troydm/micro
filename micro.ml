@@ -317,7 +317,7 @@ let compile file =
         close_stream stm; 
         close_generator g;
         let _ = Sys.command ("nasm -f elf " ^ g.file) in
-        let _ = Sys.command ("gcc -o " ^ out ^ " " ^ out ^ ".o") in ()
+        let _ = Sys.command ("gcc -m32 -o " ^ out ^ " " ^ out ^ ".o") in ()
     with Syntax_error e ->
             Format.printf "syntax error: %s\n" e;
             Format.print_flush()
